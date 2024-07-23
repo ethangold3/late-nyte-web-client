@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { createGame, startGame, updateNewsArticles} from '../services/api';
-import { webSocketService } from '../services/websocket';
+import { createGame, startGame, updateNewsArticles } from '../services/api';
+import { webSocketService } from '../services/websockets';
 
-
-const HomePage = () => {
+const HomePage: React.FC = () => {
   const [gameId, setGameId] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +10,6 @@ const HomePage = () => {
   useEffect(() => {
     if (gameId) {
       const socket = webSocketService.connect(gameId);
-
       socket.on('gameUpdate', (updatedGame) => {
         console.log('Received game update:', updatedGame);
         setPlayers(updatedGame.players.map((p: any) => p.username));
@@ -38,7 +36,6 @@ const HomePage = () => {
 
   const handleStartGame = async () => {
     if (!gameId) return;
-
     try {
       await startGame(gameId);
       // Here you would typically navigate to the game screen or update the UI
@@ -65,7 +62,6 @@ const HomePage = () => {
           <p className="text-xl mb-2">Game ID:</p>
           <p className="text-3xl font-bold mb-4">{gameId}</p>
           <p className="mb-4">Share this Game ID with players to join on their mobile devices.</p>
-          
           <h3 className="text-xl font-bold mb-2">Players Joined:</h3>
           {players.length === 0 ? (
             <p>Waiting for players to join...</p>
@@ -76,7 +72,6 @@ const HomePage = () => {
               ))}
             </ul>
           )}
-          
           <button
             onClick={handleStartGame}
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"

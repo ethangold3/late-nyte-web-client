@@ -1,69 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { webSocketService } from '../../services/websockets';
+import GameLobby from '../../components/GameLobby';
+import RoundProgress from '../../components/RoundProgress';
+import Voting from '../../components/Voting';
+import Scoreboard from '../../components/Scoreboard';
 
-const GamePage = () => {
+const Game: React.FC = () => {
+  const [gameState, setGameState] = useState('lobby');
+  const [gameData, setGameData] = useState<any>(null);
   const router = useRouter();
-  const { id } = router.query;
-  const [gameState, setGameState] = useState('waiting');
-  const [currentRound, setCurrentRound] = useState(0);
-  const [headline, setHeadline] = useState('');
-  const [punchlines, setPunchlines] = useState(['', '']);
-  const [scores, setScores] = useState({});
+  const { id: gameId } = router.query;
+  const [socket, setSocket] = useState<any>(null);
 
   useEffect(() => {
-    // TODO: Implement WebSocket connection to get real-time game updates
-  }, [id]);
+    if (gameId) {
+      const newSocket = webSocketService.connect(gameId as string);
+      setSocket(newSocket);
 
-  const renderGameContent = () => {
+      newSocket.on('gameUpdate', (updatedGame) => {
+        setGameData(updatedGame);
+        setGameState(updatedGame.status);
+      });
+
+      return () => {
+        webSocketService.disconnect();
+      };
+    }
+  }, [gameId]);
+
+  const renderGameComponent = () => {
     switch (gameState) {
       case 'waiting':
-        return <p>Waiting for players to submit punchlines...</p>;
-      case 'presenting':
-        return (
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Round {currentRound}</h2>
-            <p className="text-xl mb-4">{headline}</p>
-            <div className="flex justify-around">
-              <div className="bg-white p-4 rounded shadow">
-                <p className="font-bold">Punchline 1:</p>
-                <p>{punchlines[0]}</p>
-              </div>
-              <div className="bg-white p-4 rounded shadow">
-                <p className="font-bold">Punchline 2:</p>
-                <p>{punchlines[1]}</p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'scoring':
-        return (
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Scores</h2>
-            {Object.entries(scores).map(([player, score]) => (
-              <p key={player}>
-                {player}: {score}
-              </p>
-            ))}
-          </div>
-        );
-      case 'gameOver':
-        return (
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Game Over</h2>
-            <p>Winner: {Object.entries(scores).reduce((a, b) => a[1] > b[1] ? a : b)[0]}</p>
-          </div>
-        );
+        return <GameLobby gameId={gameId as string} onStartGame={() => socket?.emit('startGame', gameId)} />;
+      case 'in-progress':
+        return <RoundProgress gameId={gameId as string} roundNumber={gameData?.currentRound} />;
+      case 'voting':
+        return <Voting gameId={gameId as string} roundNumber={gameData?.currentRound} />;
+      case 'completed':
+        return <Scoreboard players={gameData?.players} isGameOver={true} />;
       default:
-        return null;
+        return <div>Loading...</div>;
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <h1 className="text-4xl font-bold mb-8">Late Nyte Game: {id}</h1>
-      {renderGameContent()}
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-4">Late Nyte Game</h1>
+      {renderGameComponent()}
     </div>
   );
 };
 
-export default GamePage;
+export default Game;

@@ -20,6 +20,7 @@ export const joinGame = async (gameId: string, username: string) => {
 
 export const updateNewsArticles = async () => {
   const response = await api.post('/game/updateArticles');
+  console.log('this is the news article response:', response)
   return response.data;
 };
 
